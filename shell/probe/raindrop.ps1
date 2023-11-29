@@ -1,12 +1,22 @@
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-function Execute { 
+function Execute {
     Param([String]$File)
 
+    $stderrFile = "stderr.txt"
+
     try {
-        $R = (Start-Process -FilePath $File -Wait -NoNewWindow -PassThru).ExitCode
-        $Code = if (Test-Path $File) {$R} Else {127}
-        return $Code
+        # Start the process, redirect stderr to the file
+        $process = Start-Process -FilePath $File -NoNewWindow -PassThru -RedirectStandardError $stderrFile
+        $handle = $process.Handle
+        $process.WaitForExit()
+        $exitCode = $process.ExitCode
+
+        if (Test-Path $File) {
+            return $exitCode
+        } else {
+            return 127
+        }
     } catch [System.UnauthorizedAccessException] {
         return 126
     } catch [System.InvalidOperationException] {
@@ -16,7 +26,7 @@ function Execute {
     }
 }
 
-function FromEnv { param ([string]$envVar, [string]$default)
+function FromEnv { param([string]$envVar, [string]$default)
     $envVal = [Environment]::GetEnvironmentVariable($envVar, "Machine")
     if ($envVal) { return $envVal } else { return $default }
 }
@@ -27,20 +37,20 @@ $dat = ""
 
 while ($true) {
     try {
-        $task = Invoke-WebRequest -Uri "https://api.preludesecurity.com" -Headers @{
-            "token" = $env:PRELUDE_TOKEN
-            "dos" = "windows-$Env:PROCESSOR_ARCHITECTURE"
-            "dat" = $dat
-            "version" = "2"
-        } -UseBasicParsing -MaximumRedirection 0 -ErrorAction SilentlyContinue
-        
-        $uuid = $task.content -replace ".*?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}).*", '$1'
-        $auth = $task.content -replace '^[^/]*//([^/]*)/.*', '$1'
 
         if ($uuid -and $auth -eq $ca) {
             Invoke-WebRequest -Uri $task.content -OutFile (New-Item -path "$dir\$uuid.exe" -Force ) -UseBasicParsing
             $code = Execute "$dir\$uuid.exe"
-            $dat = "${uuid}:${code}"
+
+            # Read and parse the stderr content
+            $stderrContent = Get-Content stderr.txt
+            if ($stderrContent -match 'line:\s*(\d+)') {
+                $line = $matches[1]
+            } else {
+                $line = "Unknown"
+            }
+
+            $dat = "${uuid}:${code}:${line}"
         } elseif ($task -eq "stop") {
             exit
         } else {
