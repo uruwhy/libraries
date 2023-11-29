@@ -3,11 +3,9 @@
 function Execute {
     Param([String]$File)
 
-    $stderrFile = "stderr.txt"
-
     try {
-        # Start the process, redirect stderr to the file
-        $process = Start-Process -FilePath $File -NoNewWindow -PassThru -RedirectStandardError $stderrFile
+        # Start the process without redirecting stderr, as Go handles it
+        $process = Start-Process -FilePath $File -NoNewWindow -PassThru
         $handle = $process.Handle
         $process.WaitForExit()
         $exitCode = $process.ExitCode
