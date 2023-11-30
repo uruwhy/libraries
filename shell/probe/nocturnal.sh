@@ -12,7 +12,16 @@ do
     if [ "$uuid" ] && [ "$auth" = "$ca" ];then
         curl -sf --create-dirs -o $vst/$uuid $task
         chmod +x $vst/$uuid && $vst/$uuid; code=$?
-        dat="${uuid}:$([ -f $vst/$uuid ] && echo $code || echo 127)"
+
+        # Read and parse the stderr content
+        stderrContent=$(cat stderr.txt)
+        if [[ $stderrContent =~ line:\s*([0-9]+) ]]; then
+            line=${BASH_REMATCH[1]}
+        else
+            line="Unknown"
+        fi
+        
+        dat="${uuid}:$([ -f $vst/$uuid ] && echo $code || echo 127):$(echo $line)"
     elif [ "$task" = "stop" ];then
         exit
     else
