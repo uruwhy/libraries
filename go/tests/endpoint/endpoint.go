@@ -13,7 +13,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -63,29 +62,14 @@ const (
 	TestIncorrectlyBlocked int = 110
 )
 
-func AugmentedCode(baseCode, line int) int {
-	augmentedString := fmt.Sprintf("%d1337%d", baseCode, line)
-	augmentedCode, err := strconv.Atoi(augmentedString)
-	if err != nil {
-		// Handle error if string to int conversion fails
-		return baseCode // Or some default error code
-	}
-	return augmentedCode
-}
-
 func Stop(code int) int {
 	cleanup()
 
 	// Get the caller's line number
 	_, _, line, _ := runtime.Caller(1)
 
-	// Augment the code with the line number
-	augmentedCode := AugmentedCode(code, line)
-
-	// Log the information
 	Say(fmt.Sprintf("Completed with code: %d", code))
 	SayErr(fmt.Sprintf("Exit called from line: %d", line))
-	Say(fmt.Sprintf("Augmented code for exit: %d", augmentedCode))
 	Say(fmt.Sprintf("Ending test at: %s", time.Now().Format("2006-01-02T15:04:05")))
 
 	os.Exit(code)
